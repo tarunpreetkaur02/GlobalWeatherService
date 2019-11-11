@@ -7,8 +7,8 @@ Instructions to run the project:
 
 NODE
 Clone the aforementioned repository
-Go to weatherExcerciseDockerFile folder and run npm install
-Got to weatherExcerciseDockerFile folder and execute build the docker image and run it as a container or, simply run node server.js to start the Weather SOAP WS
+Go to weatherExcerciseDockerFile(Provided in the problem statement) folder and run npm install
+Run node server.js to start the Weather SOAP WS
 Check whether both the  operations are running on the localhost
 http://localhost:8080/GlobalWeather
 
