@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd">
+	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="62731d75-fe85-4533-89ba-dce5904590b2" >
+		<wsc:connection soapVersion="SOAP12" wsdlLocation="http://localhost:8080/GlobalWeather?wsdl" service="GlobalWeather" port="GlobalWeatherSoap12" address="http://localhost:8080/GlobalWeather" />
+	</wsc:config>
+	<flow name="cities" doc:id="fcfe0710-c2c5-4ba9-a5f7-0d49c96dff6e" >
+		<logger level="INFO" doc:name="Logger" doc:id="97e8dd9e-bbe4-4451-b1b0-311122857643" message="'CountryName=' #[message.attributes.queryParams.country]"/>
+		<ee:transform doc:name="Transform Message" doc:id="902ba5c0-3eb0-4c51-b2de-37e67b6ca90a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.webserviceX.NET
+---
+{
+	ns0#GetCitiesByCountry: {
+	ns0#CountryName: message.attributes.queryParams.country
+}
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume operation="GetCitiesByCountry" doc:name="Consume" doc:id="7a88eb88-1404-4fc5-9eed-7a860d9a12a8" config-ref="Web_Service_Consumer_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="0def4f84-2640-4f56-bc00-c961fd188099" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.body]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="98150e99-a8d5-46fc-9fba-5096eaacdcdb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Strings
+output application/java 
+---
+substringAfter(trim(payload.^raw as String 
+replace ("\"") with " "
+replace ("&gt;") with ">"
+replace ("&lt;") with "<"
+replace ("\\n") with " "
+replace ("\\") with " "
+replace ("\"\"") with " "
+replace ("\n}") with " "),":")
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="c6c85e0a-dee3-47f9-be8d-330d3d84054f" mimeType="application/xml"/>
+		<ee:transform doc:name="Transform Message" doc:id="6e89440c-e634-4a58-942a-8025c01c3dda" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json duplicateKeyAsArray=true
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="weather" doc:id="d8aec5db-fbcf-48e5-b1d7-cdd24e66125c" >
+		<logger level="INFO" doc:name="Logger" doc:id="2ef76ea1-2020-4dba-8511-a96a568d779f" message="'CountryName=' #[message.attributes.queryParams.country]  'City Name='  #[message.attributes.queryParams.city]"/>
+		<ee:transform doc:name="Transform Message" doc:id="64200afc-9974-4cb5-8a8d-f0d78e55987f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.webserviceX.NET
+---
+{
+	ns0#GetWeather: {
+		ns0#CityName: message.attributes.queryParams.city,
+		ns0#CountryName: message.attributes.queryParams.country 
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume doc:name="Consume" doc:id="2a0a0351-7e98-47cc-ae29-ec70c4efcf21" config-ref="Web_Service_Consumer_Config" operation="GetWeather"/>
+		<ee:transform doc:name="Transform Message" doc:id="f9e4f8bb-1923-4f49-91bd-92232915806a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.body]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="25c96c70-1a26-4519-9dc5-859427ee8edb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Strings
+output application/java
+---
+
+substringBefore(substringAfterLast(trim(payload.^raw as String 
+replace ("&gt;") with ">"
+replace ("&lt;") with "<"
+replace ("\\n") with " "
+replace ("\\") with " "
+replace ("\"\"") with " "
+replace ("\n}") with " "),"["),"]"
+)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="24e2ebce-d7e6-4af3-8517-6c29df84bbd2" mimeType="application/xml"/>
+		<ee:transform doc:name="Transform Message" doc:id="debb844f-4121-4964-945b-74c980543026" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
